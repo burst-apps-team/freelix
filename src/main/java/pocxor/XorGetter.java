@@ -1,7 +1,6 @@
 package pocxor;
 
-import brs.util.Convert;
-import brs.util.MiningPlot;
+import burst.kit.crypto.BurstCrypto;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -9,6 +8,7 @@ import java.io.RandomAccessFile;
 
 public class XorGetter {
 
+    BurstCrypto burstCrypto = BurstCrypto.getInstance();
     private final long id;
     private final int scoop;
 
@@ -18,7 +18,7 @@ public class XorGetter {
     }
 
     public byte[][] get() {
-        try (RandomAccessFile file = new RandomAccessFile(Convert.toUnsignedLong(id), "r")) {
+        try (RandomAccessFile file = new RandomAccessFile(Long.toUnsignedString(id), "r")) {
 
             byte[][] firstResults = firstHalf(file);
             byte[][] secondResults = secondHalf(file);
@@ -40,7 +40,7 @@ public class XorGetter {
 
     private byte[][] firstHalf(RandomAccessFile file) throws IOException {
         byte[][] results = new byte[MiningPlot.SCOOPS_PER_PLOT][];
-        MiningPlot plot = new MiningPlot(id, scoop + MiningPlot.SCOOPS_PER_PLOT);
+        MiningPlot plot = new MiningPlot(burstCrypto::getShabal256, id, scoop + MiningPlot.SCOOPS_PER_PLOT, 2);
         for (int nonce = 0; nonce < results.length; nonce++) {
             file.seek((nonce * MiningPlot.PLOT_SIZE) + (scoop * MiningPlot.SCOOP_SIZE));
             results[nonce] = new byte[MiningPlot.SCOOP_SIZE];
@@ -52,7 +52,7 @@ public class XorGetter {
 
     private byte[][] secondHalf(RandomAccessFile file) throws IOException {
         byte[][] results = new byte[MiningPlot.SCOOPS_PER_PLOT][];
-        MiningPlot plot = new MiningPlot(id, scoop);
+        MiningPlot plot = new MiningPlot(burstCrypto::getShabal256, id, scoop, 2);
         file.seek(scoop * MiningPlot.PLOT_SIZE);
         byte[] data = new byte[MiningPlot.PLOT_SIZE];
         file.read(data);
