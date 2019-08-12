@@ -14,11 +14,12 @@ import java.math.BigInteger
  * poor use of parallelization opportunities (compute the 2 nonces on one thread whilst we read on the other etc)
  * and lots of disk seeks, an optimization which will likely require changing the format of the plot files.
  */
-class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val id: Long, private val scoop: Int, private val pocVersion: Int) : PlotReader {
-    override fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, pocVersion: Int): Observable<Deadline> {
+class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val id: Long, private val pocVersion: Int) : PlotReader {
+    override fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, height: Long, pocVersion: Int): Observable<Deadline> {
+        val burstCrypto = BurstCrypto.getInstance()
         return Observable.fromArray(*plotFiles)
                 .subscribeOn(Schedulers.io())
-                .flatMap { read(it) }
+                .flatMap { read(it, burstCrypto.calculateScoop(generationSignature, height)) }
                 .flatMapMaybe {
                     Maybe.fromCallable {
                         Pair(it.first, calculateDeadline(generationSignature, baseTarget, it.second)
@@ -45,7 +46,7 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
     /**
      * @return an observable containing the scoops
      */
-    private fun read(plotFile: String): Observable<Pair<Long, ByteArray>> {
+    private fun read(plotFile: String, scoop: Int): Observable<Pair<Long, ByteArray>> {
         return Observable.create {
             XorGetter(id, scoop, plotFile, pocVersion).get()
                     .forEach { scoop -> if (scoop != null) it.onNext(scoop) }

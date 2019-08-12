@@ -23,7 +23,7 @@ class BurstMiner(private val config: Config, private val burstNodeService: Burst
             currentRoundSearch?.dispose()
             val scoop = burstCrypto.calculateScoop(generationSignature, height)
             // We let the plotReader assign its own schedulers as it will likely need both IO and computation schedulers.
-            currentRoundSearch = plotReader.fetchBestDeadlines(generationSignature, scoop, baseTarget, config.pocVersion)
+            currentRoundSearch = plotReader.fetchBestDeadlines(generationSignature, scoop, baseTarget, height, config.pocVersion)
                     .subscribe({ onNewDeadlineFound(it) }, { onReadPlotError(it) })
         }
     }
