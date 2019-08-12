@@ -54,7 +54,7 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
         val data = ByteArray(MiningPlot.PLOT_SIZE)
         file.read(data)
         for (nonce in results.indices) {
-            results[nonce] = Pair(nonce.toLong(), ByteArray(MiningPlot.SCOOP_SIZE))
+            results[nonce] = Pair(nonce.toLong() + 4096, ByteArray(MiningPlot.SCOOP_SIZE))
             System.arraycopy(data, nonce * MiningPlot.SCOOP_SIZE, results[nonce]!!.second, 0, MiningPlot.SCOOP_SIZE)
             XorUtil.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
         }

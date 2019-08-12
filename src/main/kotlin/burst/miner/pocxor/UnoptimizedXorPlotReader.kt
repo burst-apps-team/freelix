@@ -26,7 +26,7 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
                                 ?: return@fromCallable null)
                     }
                 }
-                .map { Deadline(it.first, it.second) }
+                .map { Deadline(it.second, it.first) }
     }
 
     // TODO fix burstkit4j and use that instead
