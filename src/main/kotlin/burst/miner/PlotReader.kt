@@ -1,9 +1,9 @@
 package burst.miner
 
-import io.reactivex.Flowable
+import io.reactivex.Observable
 
 interface PlotReader {
-    fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, pocVersion: Int): Flowable<Deadline>
+    fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, pocVersion: Int): Observable<Deadline>
 }
 
 class Deadline(val deadline: Long, val nonce: Long)

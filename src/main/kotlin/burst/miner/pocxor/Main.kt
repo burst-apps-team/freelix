@@ -1,4 +1,4 @@
-package pocxor
+package burst.miner.pocxor
 
 import burst.kit.crypto.BurstCrypto
 import java.util.function.Supplier
@@ -14,6 +14,7 @@ object Main {
 
         val id = java.lang.Long.parseUnsignedLong(args[1])
 
+        val start = System.currentTimeMillis()
         when {
             args[0].compareTo("plot", ignoreCase = true) == 0 -> {
                 val xorPlotter = XorPlotter(id)
@@ -21,11 +22,11 @@ object Main {
             }
             args[0].compareTo("get", ignoreCase = true) == 0 -> {
                 val scoop = if (args.size < 3) 0 else Integer.parseInt(args[2])
-                val xorGetter = XorGetter(id, scoop)
+                val xorGetter = XorGetter(id, scoop, java.lang.Long.toUnsignedString(id), 2)
                 val results = xorGetter.get()
 
                 for (nonce in results.indices) {
-                    println("n" + nonce + "s" + scoop + " " + burstCrypto.toHexString(results[nonce]))
+                    println("n" + nonce + "s" + scoop + " " + burstCrypto.toHexString(results[nonce]!!.second))
                 }
             }
             args[0].compareTo("test", ignoreCase = true) == 0 -> { // just for checking results easily
@@ -36,5 +37,6 @@ object Main {
             }
             else -> println("Invalid op")
         }
+        println("Took " + (System.currentTimeMillis() - start) + "ms")
     }
 }
