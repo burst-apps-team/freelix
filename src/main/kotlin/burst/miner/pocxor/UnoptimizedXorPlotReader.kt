@@ -48,7 +48,7 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
      */
     private fun read(plotFile: String, scoop: Int): Observable<Pair<Long, ByteArray>> {
         return Observable.create {
-            XorGetter(id, scoop, plotFile, pocVersion).get()
+            XorGetter(id, scoop, plotFile, 0, pocVersion).get()
                     .forEach { scoop -> if (scoop != null) it.onNext(scoop) }
         }
     }
