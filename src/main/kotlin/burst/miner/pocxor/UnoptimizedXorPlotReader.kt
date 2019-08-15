@@ -7,6 +7,7 @@ import io.reactivex.Maybe
 import io.reactivex.Observable
 import io.reactivex.schedulers.Schedulers
 import java.math.BigInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * A poor, unoptimized implementation of the Xor mining algorithm.
@@ -17,13 +18,22 @@ import java.math.BigInteger
 class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val id: Long, private val pocVersion: Int) : PlotReader {
     override fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, height: Long, pocVersion: Int): Observable<Deadline> {
         val burstCrypto = BurstCrypto.getInstance()
+        val bestDeadline = AtomicLong(Long.MAX_VALUE)
         return Observable.fromArray(*plotFiles)
                 .subscribeOn(Schedulers.io())
                 .flatMap { read(it, burstCrypto.calculateScoop(generationSignature, height)) }
                 .flatMapMaybe {
                     Maybe.fromCallable {
-                        Pair(it.first, calculateDeadline(generationSignature, baseTarget, it.second)
-                                ?: return@fromCallable null)
+                        val deadline = calculateDeadline(generationSignature, baseTarget, it.second)
+                                ?: return@fromCallable null
+                        synchronized(bestDeadline) {
+                            if (deadline < bestDeadline.get()) {
+                                bestDeadline.set(deadline)
+                                return@fromCallable Pair(it.first, deadline)
+                            } else {
+                                return@fromCallable null
+                            }
+                        }
                     }
                 }
                 .map { Deadline(it.second, it.first) }
