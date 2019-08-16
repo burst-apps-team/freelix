@@ -13,7 +13,7 @@ class BurstMiner(private val config: Config, private val burstNodeService: Burst
     private var currentRoundSearch: Disposable? = null
     private val currentRoundSearchLock = Any()
 
-    init {
+    fun startMining() {
         burstNodeService.miningInfo
                 .subscribeOn(Schedulers.io())
                 .subscribe({ miningInfo -> onNewRound(miningInfo.generationSignature, miningInfo.baseTarget, miningInfo.height) }, { onFetchNewRoundError(it) })

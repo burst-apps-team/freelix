@@ -1,4 +1,4 @@
-package burst.miner.pocxor
+package burst.common
 
 import kotlin.experimental.xor
 

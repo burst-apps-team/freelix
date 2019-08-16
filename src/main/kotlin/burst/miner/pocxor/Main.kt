@@ -17,8 +17,8 @@ object Main {
         val start = System.currentTimeMillis()
         when {
             args[0].compareTo("plot", ignoreCase = true) == 0 -> {
-                val xorPlotter = XorPlotter(id, 8196)
-                xorPlotter.plot()
+                //val xorPlotter = XorPlotter(id, 8196)
+                //xorPlotter.plot()
             }
             args[0].compareTo("get", ignoreCase = true) == 0 -> {
                 val scoop = if (args.size < 3) 0 else Integer.parseInt(args[2])

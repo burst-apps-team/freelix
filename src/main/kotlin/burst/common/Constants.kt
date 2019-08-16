@@ -1,4 +1,4 @@
-package burst.miner
+package burst.common
 
 object Constants {
     const val VERSION = "v0.1.0-dev"

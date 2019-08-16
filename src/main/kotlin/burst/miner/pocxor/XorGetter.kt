@@ -1,5 +1,6 @@
 package burst.miner.pocxor
 
+import burst.common.XorUtil
 import burst.kit.crypto.BurstCrypto
 
 import java.io.FileNotFoundException

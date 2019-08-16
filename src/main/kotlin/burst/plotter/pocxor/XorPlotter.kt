@@ -1,30 +1,27 @@
-package burst.miner.pocxor
+package burst.plotter.pocxor
 
+import burst.common.XorUtil
 import burst.kit.crypto.BurstCrypto
-
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.io.IOException
+import burst.miner.pocxor.MiningPlot
+import io.reactivex.Completable
+import io.reactivex.Observable
+import io.reactivex.schedulers.Schedulers
+import java.io.OutputStream
 import java.util.function.Supplier
 
-class XorPlotter(private val id: Long, private val startNonce: Long) {
+class XorPlotter(private val id: Long) {
     private var burstCrypto = BurstCrypto.getInstance()
 
-    fun plot() {
-        try {
-            FileOutputStream(java.lang.Long.toUnsignedString(id) + "_" + startNonce.toString(), false).use { file ->
-                val data = calculatePlotData()
-                file.write(data)
-            }
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
+    fun plot(output: OutputStream, startNonces: Array<Long>): Completable {
+        return Observable.fromArray(*startNonces)
+                .subscribeOn(Schedulers.computation())
+                .map { calculatePlotData(it) }
+                .observeOn(Schedulers.io())
+                .flatMapCompletable { plotData -> Completable.fromAction { output.write(plotData.second, (MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE * plotData.first).toInt(), plotData.second.size) } }
 
     }
 
-    private fun calculatePlotData(): ByteArray {
+    private fun calculatePlotData(startNonce: Long): Pair<Long, ByteArray> {
         val data = ByteArray(MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE)
 
         for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // first set is straight copied
@@ -45,6 +42,6 @@ class XorPlotter(private val id: Long, private val startNonce: Long) {
             }
         }
 
-        return data
+        return Pair(startNonce, data)
     }
 }
