@@ -7,7 +7,6 @@ import io.reactivex.Completable
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.Single
-import io.reactivex.parallel.ParallelFlowable
 import io.reactivex.schedulers.Schedulers
 import java.io.OutputStream
 import java.util.function.Supplier
