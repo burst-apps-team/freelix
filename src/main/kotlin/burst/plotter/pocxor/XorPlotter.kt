@@ -4,7 +4,8 @@ import burst.common.XorUtil
 import burst.kit.crypto.BurstCrypto
 import burst.miner.pocxor.MiningPlot
 import io.reactivex.Completable
-import io.reactivex.Observable
+import io.reactivex.Single
+import io.reactivex.parallel.ParallelFlowable
 import io.reactivex.schedulers.Schedulers
 import java.io.OutputStream
 import java.util.function.Supplier
@@ -13,15 +14,14 @@ class XorPlotter(private val id: Long) {
     private var burstCrypto = BurstCrypto.getInstance()
 
     fun plot(output: OutputStream, startNonces: Array<Long>): Completable {
-        return Observable.fromArray(*startNonces)
-                .subscribeOn(Schedulers.computation())
-                .map { calculatePlotData(it) }
-                .observeOn(Schedulers.io())
-                .flatMapCompletable { plotData -> Completable.fromAction { output.write(plotData.second, (MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE * plotData.first).toInt(), plotData.second.size) } }
+        return ParallelFlowable.fromArray(*startNonces)
+                .flatMapSingle { Single.fromCallable { calculatePlotData(it) }.subscribeOn(Schedulers.computation()) }
+                .flatMapCompletable { plotData -> Completable.fromAction { output.write(plotData.second, (MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE * plotData.first).toInt(), plotData.second.size) }.observeOn(Schedulers.io()) }
 
     }
 
     private fun calculatePlotData(startNonce: Long): Pair<Long, ByteArray> {
+        println("Calculating plot data for start nonce $startNonce")
         val data = ByteArray(MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE)
 
         for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // first set is straight copied
