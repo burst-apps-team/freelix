@@ -7,14 +7,16 @@ import io.reactivex.Completable
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import java.io.RandomAccessFile
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Supplier
+import kotlin.math.min
 import kotlin.math.roundToLong
 
 class XorPlotter(private val id: Long) {
     private var burstCrypto = BurstCrypto.getInstance()
 
     fun plot(output: RandomAccessFile, startNonces: Array<Long>): Completable {
-        var nextStartNonceIndex = 0
+        val nextStartNonceIndex = AtomicInteger(0)
         val selectNextStartNonceLock = Any()
         val writeDiskLock = Any()
         return Single.fromCallable {
@@ -27,29 +29,31 @@ class XorPlotter(private val id: Long) {
             val buffers = mutableListOf<ByteArray>()
 
             println("Allocating memory...")
-            while (true) {
+            val maxBuffers = min(startNonces.size, Runtime.getRuntime().availableProcessors())
+            while (buffers.size < maxBuffers) {
                 try {
                     buffers.add(ByteArray(setSize))
                 } catch (e: OutOfMemoryError) {
-                    println("Allocated ${buffers.size} buffers. Let's go!")
                     break
                 }
             }
+            println("Allocated ${buffers.size} buffers. Let's go!")
+
             return@fromCallable buffers
         }
                 .subscribeOn(Schedulers.io())
                 .flattenAsObservable { it }
                 .flatMapCompletable { buffer ->
                     Completable.fromAction {
-                        while (true) {
+                        var startNonce: Long
+                        while (true) { // TODO not while true...
                             // Choose a startNonce
-                            val startNonce: Long
                             synchronized(selectNextStartNonceLock) {
-                                if (nextStartNonceIndex >= startNonces.size) {
+                                if (nextStartNonceIndex.get() >= startNonces.size) {
                                     return@fromAction
                                 }
-                                startNonce = startNonces[nextStartNonceIndex]
-                                nextStartNonceIndex++
+                                startNonce = startNonces[nextStartNonceIndex.getAndIncrement()]
+                                nextStartNonceIndex
                             }
                             println("Calculating data for start nonce $startNonce")
                             // Calculate the plot data

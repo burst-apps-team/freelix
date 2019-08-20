@@ -8,7 +8,7 @@ object Launcher {
     fun main(args: Array<String>) {
         val id = 7009665667967103287L
         val startNonce = 0L
-        val nonceCount = 131072L // 16GB of nonces, should perform like 32gb
+        val nonceCount = 8192L * 16 // 16GB of nonces, should perform like 32gb
         val path = "./plot"
         val plotWriter = UnoptimizedXorPlotWriter()
         println("Starting Burst Plotter " + Constants.VERSION)
