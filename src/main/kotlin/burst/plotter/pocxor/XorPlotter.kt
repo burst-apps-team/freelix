@@ -3,23 +3,26 @@ package burst.plotter.pocxor
 import burst.kit.crypto.BurstCrypto
 import burst.miner.pocxor.MiningPlot
 import io.reactivex.Completable
-import io.reactivex.Maybe
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
-import java.io.OutputStream
+import java.io.RandomAccessFile
 import kotlin.math.roundToLong
 
 class XorPlotter(private val id: Long) {
     private var burstCrypto = BurstCrypto.getInstance()
 
-    fun plot(output: OutputStream, startNonces: Array<Long>): Completable {
+    fun plot(output: RandomAccessFile, startNonces: Array<Long>): Completable {
         var nextStartNonceIndex = 0
         val selectNextStartNonceLock = Any()
         val writeDiskLock = Any()
         return Single.fromCallable {
-            // Allocate memory.
-            val buffers = mutableListOf<ByteArray>()
             val setSize = MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE
+
+            // Set file size
+            output.setLength(startNonces.size * setSize.toLong())
+
+            // Allocate memory
+            val buffers = mutableListOf<ByteArray>()
 
             println("Allocating memory...")
             while (true) {
@@ -34,37 +37,36 @@ class XorPlotter(private val id: Long) {
         }
                 .subscribeOn(Schedulers.io())
                 .flattenAsObservable { it }
-                .flatMapMaybe { buffer ->
-                    Maybe.fromCallable {
-                        // Choose a startNonce
-                        synchronized(selectNextStartNonceLock) {
-                            if (nextStartNonceIndex >= startNonces.size) {
-                                return@fromCallable null
-                            }
-                            val startNonce = startNonces[nextStartNonceIndex]
-                            nextStartNonceIndex++
-                            return@fromCallable Pair(startNonce, buffer)
-                        }
-                    }.subscribeOn(Schedulers.single()) // This only needs to run on one thread
-                }
-                .flatMapSingle {
-                    Single.fromCallable {
-                        calculatePlotData(it.second, it.first)
-                        return@fromCallable it
-                    }.subscribeOn(Schedulers.computation()) // This is computationally intensive
-                }
-                .flatMapCompletable {
+                .flatMapCompletable { buffer ->
                     Completable.fromAction {
-                        synchronized(writeDiskLock) {
-                            output.write(it.second, (MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE * it.first).toInt(), it.second.size)
+                        while (true) {
+                            // Choose a startNonce
+                            val startNonce: Long
+                            synchronized(selectNextStartNonceLock) {
+                                if (nextStartNonceIndex >= startNonces.size) {
+                                    return@fromAction
+                                }
+                                startNonce = startNonces[nextStartNonceIndex]
+                                nextStartNonceIndex++
+                            }
+                            println("Calculating data for start nonce $startNonce")
+                            // Calculate the plot data
+                            calculatePlotData(buffer, startNonce)
+                            println("Start nonce $startNonce calculation finished!")
+                            // Write it to disk
+                            synchronized(writeDiskLock) {
+                                println("Writing start nonce $startNonce to disk...")
+                                output.seek(MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE * startNonce)
+                                output.write(buffer)
+                                println("Finished writing start nonce $startNonce to disk...")
+                            }
                         }
-                    }.subscribeOn(Schedulers.single()) // This only needs to run on one thread
+
+                    }.subscribeOn(Schedulers.computation()) // This is computationally intensive
                 }
     }
 
     private fun calculatePlotData(buffer: ByteArray, startNonce: Long) {
-        println("Calculating plot data for start nonce $startNonce")
-
         fun printProgress(currentNonce: Int) {
             // Update every 1%
             if (currentNonce % (MiningPlot.SCOOPS_PER_PLOT / 50 /* scoopsPerPlot*2/100 */) == 0) {
@@ -87,7 +89,5 @@ class XorPlotter(private val id: Long) {
                 XorUtil.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), plot.getScoop(scoop))
             }
         }*/
-
-        println("Start nonce $startNonce finished!")
     }
 }
