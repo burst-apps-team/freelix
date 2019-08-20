@@ -1,15 +1,13 @@
 package burst.miner.pocxor
 
 import burst.kit.crypto.BurstCrypto
-import java.math.BigInteger
 import java.security.MessageDigest
 import java.util.*
 import java.util.function.Supplier
 import kotlin.experimental.xor
 
 class MiningPlot(shabal256Supplier: Supplier<MessageDigest>, addr: Long, nonce: Long, pocVersion: Int) {
-
-    private val data = ByteArray(PLOT_TOTAL_SIZE)
+    val data = ByteArray(PLOT_TOTAL_SIZE)
 
     init {
         System.arraycopy(BurstCrypto.getInstance().longToBytes(addr), 0, data, PLOT_SIZE, 8)
@@ -66,11 +64,10 @@ class MiningPlot(shabal256Supplier: Supplier<MessageDigest>, addr: Long, nonce: 
         const val HASHES_PER_SCOOP = 2
         const val SCOOP_SIZE = HASHES_PER_SCOOP * HASH_SIZE
         const val SCOOPS_PER_PLOT = 4096
-        val SCOOPS_PER_PLOT_BIGINT = BigInteger.valueOf(SCOOPS_PER_PLOT.toLong())
         const val PLOT_SIZE = SCOOPS_PER_PLOT * SCOOP_SIZE
         const val BASE_LENGTH = 16
         const val PLOT_TOTAL_SIZE = PLOT_SIZE + BASE_LENGTH
 
-        private const val HASH_CAP = 4096
+        private const val HASH_CAP = SCOOPS_PER_PLOT
     }
 }

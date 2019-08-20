@@ -1,5 +1,10 @@
 package burst.miner.pocxor
 
+import burst.miner.Deadline
+import burst.miner.PlotReader
+import io.reactivex.Observable
+import java.io.RandomAccessFile
+
 /**
  * In theory, what we need to do to be as efficient as possible is:
  * 1. Check which nonces we are reading and figure out which ones we need to generate on the fly.
@@ -16,5 +21,16 @@ package burst.miner.pocxor
  * 2. Once we have all the data, start the process again, and on a separate thread, start calculating the deadline for each retrieved nonce. This could take advantage of any remaining cores.
  * 3. If it turns out we are CPU-bound rather than IO bound, we could use other threads to calculate the next set's 2 nonces in advance.
  */
-class OptimizedXorPlotReader {
+class OptimizedXorPlotReader : PlotReader {
+    override fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, height: Long, pocVersion: Int): Observable<Deadline> {
+        TODO()
+    }
+
+    private fun readOneSet(plotFile: RandomAccessFile) {
+        val buffer = ByteArray(MiningPlot.SCOOPS_PER_PLOT * 2 * MiningPlot.SCOOP_SIZE)
+        for (i in 0 until MiningPlot.SCOOPS_PER_PLOT * 2) {
+            plotFile.seek((i * MiningPlot.PLOT_SIZE + i * MiningPlot.SCOOP_SIZE).toLong())
+            plotFile.read()
+        }
+    }
 }
