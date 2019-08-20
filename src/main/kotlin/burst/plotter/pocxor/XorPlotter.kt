@@ -1,11 +1,13 @@
 package burst.plotter.pocxor
 
+import burst.common.XorUtil
 import burst.kit.crypto.BurstCrypto
 import burst.miner.pocxor.MiningPlot
 import io.reactivex.Completable
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import java.io.RandomAccessFile
+import java.util.function.Supplier
 import kotlin.math.roundToLong
 
 class XorPlotter(private val id: Long) {
@@ -27,7 +29,7 @@ class XorPlotter(private val id: Long) {
             println("Allocating memory...")
             while (true) {
                 try {
-                    buffers.add(ByteArray(setSize) { (it % 0xFF).toByte() })
+                    buffers.add(ByteArray(setSize))
                 } catch (e: OutOfMemoryError) {
                     println("Allocated ${buffers.size} buffers. Let's go!")
                     break
@@ -74,7 +76,7 @@ class XorPlotter(private val id: Long) {
             }
         }
 
-        /*for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // first set is straight copied
+        for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // first set is straight copied
             printProgress(nonce)
             val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + startNonce, 2)
             System.arraycopy(plot.data, 0, buffer, nonce * MiningPlot.PLOT_SIZE, MiningPlot.PLOT_SIZE) // TODO plot directly into the buffer
@@ -88,6 +90,6 @@ class XorPlotter(private val id: Long) {
             for (scoop in 0 until MiningPlot.SCOOPS_PER_PLOT) {
                 XorUtil.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), plot.getScoop(scoop))
             }
-        }*/
+        }
     }
 }
