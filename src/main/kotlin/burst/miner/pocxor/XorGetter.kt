@@ -37,7 +37,7 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
     @Throws(IOException::class)
     private fun firstHalf(file: RandomAccessFile): Array<Pair<Long, ByteArray>?> {
         val results = arrayOfNulls<Pair<Long, ByteArray>>(MiningPlot.SCOOPS_PER_PLOT)
-        val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop + MiningPlot.SCOOPS_PER_PLOT + startNonce, pocVersion)
+        val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop + MiningPlot.SCOOPS_PER_PLOT + startNonce, pocVersion, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
         for (nonce in results.indices) {
             file.seek((nonce * MiningPlot.PLOT_SIZE + scoop * MiningPlot.SCOOP_SIZE).toLong())
             results[nonce] = Pair(nonce.toLong() + startNonce, ByteArray(MiningPlot.SCOOP_SIZE))
@@ -50,7 +50,7 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
     @Throws(IOException::class)
     private fun secondHalf(file: RandomAccessFile): Array<Pair<Long, ByteArray>?> {
         val results = arrayOfNulls<Pair<Long, ByteArray>>(MiningPlot.SCOOPS_PER_PLOT)
-        val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop.toLong() + startNonce, pocVersion)
+        val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop.toLong() + startNonce, pocVersion, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
         file.seek((scoop * MiningPlot.PLOT_SIZE).toLong())
         val data = ByteArray(MiningPlot.PLOT_SIZE)
         file.read(data)

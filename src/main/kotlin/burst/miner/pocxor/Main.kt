@@ -32,7 +32,7 @@ object Main {
             args[0].compareTo("test", ignoreCase = true) == 0 -> { // just for checking results easily
                 val nonce = if (args.size < 3) 0 else java.lang.Long.parseLong(args[2])
                 val scoop = if (args.size < 4) 0 else Integer.parseInt(args[3])
-                val miningPlot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce, 2)
+                val miningPlot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce, 2, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
                 println("n" + nonce + "s" + scoop + " " + burstCrypto.toHexString(miningPlot.getScoop(scoop)))
             }
             else -> println("Invalid op")

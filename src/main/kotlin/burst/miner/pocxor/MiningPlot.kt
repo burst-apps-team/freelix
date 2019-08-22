@@ -6,28 +6,24 @@ import java.util.*
 import java.util.function.Supplier
 import kotlin.experimental.xor
 
-class MiningPlot(shabal256Supplier: Supplier<MessageDigest>, addr: Long, nonce: Long, pocVersion: Int) {
-    val data = ByteArray(PLOT_TOTAL_SIZE)
-
+class MiningPlot(shabal256Supplier: Supplier<MessageDigest>, addr: Long, nonce: Long, pocVersion: Int, val data: ByteArray) {
     init {
         System.arraycopy(BurstCrypto.getInstance().longToBytes(addr), 0, data, PLOT_SIZE, 8)
         System.arraycopy(BurstCrypto.getInstance().longToBytes(nonce), 0, data, PLOT_SIZE + 8, 8)
         val shabal256 = shabal256Supplier.get()
         var len: Int
-        run {
-            var i = PLOT_SIZE
-            while (i > 0) {
-                len = PLOT_TOTAL_SIZE - i
-                if (len > HASH_CAP) {
-                    len = HASH_CAP
-                }
-                shabal256.update(data, i, len)
-                System.arraycopy(shabal256.digest(), 0, data, i - HASH_SIZE, HASH_SIZE)
-                i -= HASH_SIZE
+        var i = PLOT_SIZE
+        while (i > 0) {
+            len = PLOT_TOTAL_SIZE - i
+            if (len > HASH_CAP) {
+                len = HASH_CAP
             }
+            shabal256.update(data, i, len)
+            System.arraycopy(shabal256.digest(), 0, data, i - HASH_SIZE, HASH_SIZE)
+            i -= HASH_SIZE
         }
         val finalHash = shabal256.digest(data)
-        var i = 0
+        i = 0
         var j = 0
         while (i < PLOT_SIZE) {
             if (j == 32) j = 0
@@ -53,10 +49,6 @@ class MiningPlot(shabal256Supplier: Supplier<MessageDigest>, addr: Long, nonce: 
 
     fun getScoop(pos: Int): ByteArray {
         return Arrays.copyOfRange(data, pos * SCOOP_SIZE, (pos + 1) * SCOOP_SIZE)
-    }
-
-    fun hashScoop(shabal256: MessageDigest, pos: Int) {
-        shabal256.update(data, pos * SCOOP_SIZE, SCOOP_SIZE)
     }
 
     companion object {

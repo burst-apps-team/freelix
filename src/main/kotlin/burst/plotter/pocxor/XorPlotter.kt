@@ -80,9 +80,12 @@ class XorPlotter(private val id: Long) {
             }
         }
 
+        // This prevents reallocating 256k of memory for each nonce - slight performance improvement
+        val plotBuffer = ByteArray(MiningPlot.PLOT_TOTAL_SIZE)
+
         for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // first set is straight copied
             printProgress(nonce)
-            val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + startNonce, 2)
+            val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + startNonce, 2, plotBuffer)
             System.arraycopy(plot.data, 0, buffer, nonce * MiningPlot.PLOT_SIZE, MiningPlot.PLOT_SIZE) // TODO plot directly into the buffer
         }
 
@@ -90,7 +93,7 @@ class XorPlotter(private val id: Long) {
 
         for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // second set is nonce + SCOOPS_PER_PLOT and is xored
             printProgress(nonce + MiningPlot.SCOOPS_PER_PLOT)
-            val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + MiningPlot.SCOOPS_PER_PLOT + startNonce, 2)
+            val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + MiningPlot.SCOOPS_PER_PLOT + startNonce, 2, plotBuffer)
             for (scoop in 0 until MiningPlot.SCOOPS_PER_PLOT) {
                 XorUtil.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), plot.getScoop(scoop))
             }
