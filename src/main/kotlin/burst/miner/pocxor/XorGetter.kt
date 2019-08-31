@@ -1,6 +1,6 @@
 package burst.miner.pocxor
 
-import burst.common.XorUtil
+import burst.common.Util
 import burst.kit.crypto.BurstCrypto
 
 import java.io.FileNotFoundException
@@ -42,7 +42,7 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
             file.seek((nonce * MiningPlot.PLOT_SIZE + scoop * MiningPlot.SCOOP_SIZE).toLong())
             results[nonce] = Pair(nonce.toLong() + startNonce, ByteArray(MiningPlot.SCOOP_SIZE))
             file.read(results[nonce]!!.second)
-            XorUtil.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
+            Util.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
         }
         return results
     }
@@ -57,7 +57,7 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
         for (nonce in results.indices) {
             results[nonce] = Pair(nonce.toLong() + 4096 + startNonce, ByteArray(MiningPlot.SCOOP_SIZE))
             System.arraycopy(data, nonce * MiningPlot.SCOOP_SIZE, results[nonce]!!.second, 0, MiningPlot.SCOOP_SIZE)
-            XorUtil.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
+            Util.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
         }
         return results
     }

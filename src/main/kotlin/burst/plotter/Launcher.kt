@@ -10,7 +10,7 @@ object Launcher {
         val startNonce = 0L
         val nonceCount = 8192L * 16 // 16GB of nonces, should perform like 32gb
         val path = "./plot"
-        val plotWriter = UnoptimizedXorPlotWriter()
+        val plotWriter = UnoptimizedXorPlotWriter(id)
         println("Starting Burst Plotter " + Constants.VERSION)
         plotWriter.writePlot(id, startNonce, nonceCount, path)
         // Wait forever

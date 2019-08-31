@@ -19,9 +19,15 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
     override fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, height: Long, pocVersion: Int): Observable<Deadline> {
         val burstCrypto = BurstCrypto.getInstance()
         val bestDeadline = AtomicLong(Long.MAX_VALUE)
+        val plotFileNameRegex = Regex("([\\d]+)_([\\d]+)_([\\d]+)")
         return Observable.fromArray(*plotFiles)
                 .subscribeOn(Schedulers.io())
-                .flatMap { read(it, burstCrypto.calculateScoop(generationSignature, height)) }
+                .map {
+                    plotFileNameRegex.findAll(it).forEach {
+                        it.
+                    }
+                }
+                .flatMap { read(it.first, it.second, burstCrypto.calculateScoop(generationSignature, height)) }
                 .flatMapMaybe {
                     Maybe.fromCallable {
                         val deadline = calculateDeadline(generationSignature, baseTarget, it.second)
@@ -56,9 +62,9 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
     /**
      * @return an observable containing the scoops
      */
-    private fun read(plotFile: String, scoop: Int): Observable<Pair<Long, ByteArray>> {
+    private fun read(plotFile: String, startNonce: Long, scoop: Int): Observable<Pair<Long, ByteArray>> {
         return Observable.create {
-            XorGetter(id, scoop, plotFile, 0, pocVersion).get()
+            XorGetter(id, scoop, plotFile, startNonce, pocVersion).get()
                     .forEach { scoop -> if (scoop != null) it.onNext(scoop) }
         }
     }
