@@ -1,5 +1,6 @@
 package burst.miner.pocxor
 
+import burst.common.Quad
 import burst.kit.crypto.BurstCrypto
 import burst.miner.Deadline
 import burst.miner.PlotReader
@@ -15,19 +16,32 @@ import java.util.concurrent.atomic.AtomicLong
  * poor use of parallelization opportunities (compute the 2 nonces on one thread whilst we read on the other etc)
  * and lots of disk seeks, an optimization which will likely require changing the format of the plot files.
  */
-class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val id: Long, private val pocVersion: Int) : PlotReader {
+class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val pocVersion: Int) : PlotReader {
     override fun fetchBestDeadlines(generationSignature: ByteArray, scoop: Int, baseTarget: Long, height: Long, pocVersion: Int): Observable<Deadline> {
         val burstCrypto = BurstCrypto.getInstance()
         val bestDeadline = AtomicLong(Long.MAX_VALUE)
         val plotFileNameRegex = Regex("([\\d]+)_([\\d]+)_([\\d]+)")
         return Observable.fromArray(*plotFiles)
                 .subscribeOn(Schedulers.io())
-                .map {
-                    plotFileNameRegex.findAll(it).forEach {
-                        it.
+                .map { plotFile ->
+                    var id: Long = -1
+                    var startSet: Long = -1
+                    var setCount: Long = -1
+                    // TODO what if plotFile is absolute path?
+                    plotFileNameRegex.findAll(plotFile).forEach {
+                        it.groups.forEachIndexed { index, match ->
+                            if (match == null) return@forEachIndexed
+                            when (index) {
+                                1 -> id = java.lang.Long.parseUnsignedLong(match.value)
+                                2 -> startSet = java.lang.Long.parseUnsignedLong(match.value)
+                                3 -> setCount = java.lang.Long.parseUnsignedLong(match.value)
+                            }
+                        }
                     }
+                    require(!(id == -1L || startSet == -1L || setCount == -1L)) { "Invalid plot file name: $plotFile" }
+                    Quad(plotFile, id, startSet, setCount)
                 }
-                .flatMap { read(it.first, it.second, burstCrypto.calculateScoop(generationSignature, height)) }
+                .flatMap { read(it.second, it.first, it.third, it.fourth, burstCrypto.calculateScoop(generationSignature, height)) }
                 .flatMapMaybe {
                     Maybe.fromCallable {
                         val deadline = calculateDeadline(generationSignature, baseTarget, it.second)
@@ -62,9 +76,9 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
     /**
      * @return an observable containing the scoops
      */
-    private fun read(plotFile: String, startNonce: Long, scoop: Int): Observable<Pair<Long, ByteArray>> {
+    private fun read(id: Long, plotFile: String, startSet: Long, setCount: Long, scoop: Int): Observable<Pair<Long, ByteArray>> {
         return Observable.create {
-            XorGetter(id, scoop, plotFile, startNonce, pocVersion).get()
+            XorGetter(id, scoop, plotFile, startSet, setCount, pocVersion).get()
                     .forEach { scoop -> if (scoop != null) it.onNext(scoop) }
         }
     }

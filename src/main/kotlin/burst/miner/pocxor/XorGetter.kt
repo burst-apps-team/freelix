@@ -8,21 +8,27 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.util.function.Supplier
 
-class XorGetter(private val id: Long, private val scoop: Int, private val file: String, private val startNonce: Long, private val pocVersion: Int) {
+class XorGetter(private val id: Long, private val scoop: Int, private val file: String, private val startSet: Long, private val setCount: Long, private val pocVersion: Int) {
     private var burstCrypto = BurstCrypto.getInstance()
 
     fun get(): Array<Pair<Long, ByteArray>?> {
         try {
             RandomAccessFile(file, "r").use { file ->
 
-                val firstResults = firstHalf(file)
-                val secondResults = secondHalf(file)
+                val results = mutableListOf<Array<Pair<Long, ByteArray>?>>()
+                for (i in 0 until setCount) {
+                    val firstResults = firstHalf(file, (startSet + i) * 2 * MiningPlot.SCOOPS_PER_PLOT)
+                    val secondResults = secondHalf(file, (startSet + i) * 2 * MiningPlot.SCOOPS_PER_PLOT)
 
-                val results = arrayOfNulls<Pair<Long, ByteArray>?>(firstResults.size + secondResults.size)
-                System.arraycopy(firstResults, 0, results, 0, firstResults.size)
-                System.arraycopy(secondResults, 0, results, firstResults.size, secondResults.size)
+                    // TODO this uses too much memory
+                    val setResults = arrayOfNulls<Pair<Long, ByteArray>?>(firstResults.size + secondResults.size)
+                    System.arraycopy(firstResults, 0, setResults, 0, firstResults.size)
+                    System.arraycopy(secondResults, 0, setResults, firstResults.size, secondResults.size)
+                    results.add(setResults)
+                }
 
-                return results
+                // TODO ...what?
+                return results.toTypedArray().flatten().toTypedArray()
             }
         } catch (e: FileNotFoundException) {
             e.printStackTrace()
@@ -35,11 +41,11 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
     }
 
     @Throws(IOException::class)
-    private fun firstHalf(file: RandomAccessFile): Array<Pair<Long, ByteArray>?> {
+    private fun firstHalf(file: RandomAccessFile, startNonce: Long): Array<Pair<Long, ByteArray>?> {
         val results = arrayOfNulls<Pair<Long, ByteArray>>(MiningPlot.SCOOPS_PER_PLOT)
         val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop + MiningPlot.SCOOPS_PER_PLOT + startNonce, pocVersion, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
         for (nonce in results.indices) {
-            file.seek((nonce * MiningPlot.PLOT_SIZE + scoop * MiningPlot.SCOOP_SIZE).toLong())
+            file.seek(((nonce + startNonce) * MiningPlot.PLOT_SIZE + scoop * MiningPlot.SCOOP_SIZE))
             results[nonce] = Pair(nonce.toLong() + startNonce, ByteArray(MiningPlot.SCOOP_SIZE))
             file.read(results[nonce]!!.second)
             Util.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
@@ -48,10 +54,10 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
     }
 
     @Throws(IOException::class)
-    private fun secondHalf(file: RandomAccessFile): Array<Pair<Long, ByteArray>?> {
+    private fun secondHalf(file: RandomAccessFile, startNonce: Long): Array<Pair<Long, ByteArray>?> {
         val results = arrayOfNulls<Pair<Long, ByteArray>>(MiningPlot.SCOOPS_PER_PLOT)
         val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop.toLong() + startNonce, pocVersion, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
-        file.seek((scoop * MiningPlot.PLOT_SIZE).toLong())
+        file.seek((startNonce * MiningPlot.PLOT_SIZE + scoop * MiningPlot.PLOT_SIZE))
         val data = ByteArray(MiningPlot.PLOT_SIZE)
         file.read(data)
         for (nonce in results.indices) {
