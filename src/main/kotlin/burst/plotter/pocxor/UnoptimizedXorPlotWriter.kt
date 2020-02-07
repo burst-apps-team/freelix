@@ -9,7 +9,6 @@ import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Supplier
 import kotlin.math.min
 import kotlin.math.roundToLong
 import kotlin.system.exitProcess
@@ -100,20 +99,20 @@ class UnoptimizedXorPlotWriter(private val id: Long) : PlotWriter {
         // This prevents reallocating 256k of memory for each nonce - slight performance improvement
         val plotBuffer = ByteArray(MiningPlot.PLOT_TOTAL_SIZE)
 
-        for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // first set is straight copied
-            printProgress(nonce)
-            val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + startNonce, 2, plotBuffer)
-            System.arraycopy(plot.data, 0, buffer, nonce * MiningPlot.PLOT_SIZE, MiningPlot.PLOT_SIZE) // TODO plot directly into the buffer
-        }
+        burstCrypto.plotNonces(id, startNonce, MiningPlot.SCOOPS_PER_PLOT.toLong(), 2.toByte(), buffer, 0)
+        printProgress(MiningPlot.SCOOPS_PER_PLOT)
 
         println("starting 2nd")
 
+        // TODO this can be accelerated using SIMD burstcrypto functions
         for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // second set is nonce + SCOOPS_PER_PLOT and is xored
-            printProgress(nonce + MiningPlot.SCOOPS_PER_PLOT)
-            val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, nonce + MiningPlot.SCOOPS_PER_PLOT + startNonce, 2, plotBuffer)
+            burstCrypto.plotNonce(id, nonce + MiningPlot.SCOOPS_PER_PLOT + startNonce, 2.toByte(), plotBuffer, 0)
             for (scoop in 0 until MiningPlot.SCOOPS_PER_PLOT) {
-                Util.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), plot.getScoop(scoop))
+                Util.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), plotBuffer, scoop * MiningPlot.SCOOP_SIZE, MiningPlot.SCOOP_SIZE)
             }
+            printProgress(nonce + MiningPlot.SCOOPS_PER_PLOT)
         }
+
+        println("Done!!!")
     }
 }

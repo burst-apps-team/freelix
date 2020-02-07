@@ -2,11 +2,9 @@ package burst.miner.pocxor
 
 import burst.common.Util
 import burst.kit.crypto.BurstCrypto
-
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.util.function.Supplier
 
 class XorGetter(private val id: Long, private val scoop: Int, private val file: String, private val startSet: Long, private val setCount: Long, private val pocVersion: Int) {
     private var burstCrypto = BurstCrypto.getInstance()
@@ -37,18 +35,18 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
             e.printStackTrace()
             throw RuntimeException("", e)
         }
-
     }
 
     @Throws(IOException::class)
     private fun firstHalf(file: RandomAccessFile, startNonce: Long): Array<Pair<Long, ByteArray>?> {
         val results = arrayOfNulls<Pair<Long, ByteArray>>(MiningPlot.SCOOPS_PER_PLOT)
-        val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop + MiningPlot.SCOOPS_PER_PLOT + startNonce, pocVersion, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
+        val plot = ByteArray(MiningPlot.PLOT_SIZE)
+        burstCrypto.plotNonce(id, scoop + MiningPlot.SCOOPS_PER_PLOT + startNonce, pocVersion.toByte(), plot, 0)
         for (nonce in results.indices) {
             file.seek(((nonce + startNonce) * MiningPlot.PLOT_SIZE + scoop * MiningPlot.SCOOP_SIZE))
             results[nonce] = Pair(nonce.toLong() + startNonce, ByteArray(MiningPlot.SCOOP_SIZE))
             file.read(results[nonce]!!.second)
-            Util.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
+            Util.xorArray(results[nonce]!!.second, 0, plot, nonce * MiningPlot.SCOOP_SIZE, MiningPlot.SCOOP_SIZE)
         }
         return results
     }
@@ -56,14 +54,15 @@ class XorGetter(private val id: Long, private val scoop: Int, private val file: 
     @Throws(IOException::class)
     private fun secondHalf(file: RandomAccessFile, startNonce: Long): Array<Pair<Long, ByteArray>?> {
         val results = arrayOfNulls<Pair<Long, ByteArray>>(MiningPlot.SCOOPS_PER_PLOT)
-        val plot = MiningPlot(Supplier { burstCrypto.shabal256 }, id, scoop.toLong() + startNonce, pocVersion, ByteArray(MiningPlot.PLOT_TOTAL_SIZE))
+        val plot = ByteArray(MiningPlot.PLOT_SIZE)
+        burstCrypto.plotNonce(id, scoop.toLong() + startNonce, pocVersion.toByte(), plot, 0)
         file.seek((startNonce * MiningPlot.PLOT_SIZE + scoop * MiningPlot.PLOT_SIZE))
         val data = ByteArray(MiningPlot.PLOT_SIZE)
         file.read(data)
         for (nonce in results.indices) {
             results[nonce] = Pair(nonce.toLong() + 4096 + startNonce, ByteArray(MiningPlot.SCOOP_SIZE))
             System.arraycopy(data, nonce * MiningPlot.SCOOP_SIZE, results[nonce]!!.second, 0, MiningPlot.SCOOP_SIZE)
-            Util.xorArray(results[nonce]!!.second, 0, plot.getScoop(nonce))
+            Util.xorArray(results[nonce]!!.second, 0, plot, nonce * MiningPlot.SCOOP_SIZE, MiningPlot.SCOOP_SIZE)
         }
         return results
     }
