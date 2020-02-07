@@ -8,8 +8,8 @@ import kotlin.experimental.xor
 
 class MiningPlot(shabal256Supplier: Supplier<MessageDigest>, addr: Long, nonce: Long, pocVersion: Int, val data: ByteArray) {
     init {
-        System.arraycopy(BurstCrypto.getInstance().longToBytes(addr), 0, data, PLOT_SIZE, 8)
-        System.arraycopy(BurstCrypto.getInstance().longToBytes(nonce), 0, data, PLOT_SIZE + 8, 8)
+        System.arraycopy(BurstCrypto.getInstance().longToBytesBE(addr), 0, data, PLOT_SIZE, 8)
+        System.arraycopy(BurstCrypto.getInstance().longToBytesBE(nonce), 0, data, PLOT_SIZE + 8, 8)
         val shabal256 = shabal256Supplier.get()
         var len: Int
         var i = PLOT_SIZE

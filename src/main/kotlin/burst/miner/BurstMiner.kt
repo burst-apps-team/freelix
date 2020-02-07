@@ -4,7 +4,6 @@ import burst.kit.crypto.BurstCrypto
 import burst.kit.service.BurstNodeService
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
-import org.bouncycastle.util.encoders.Hex
 
 class BurstMiner(private val config: Config, private val burstNodeService: BurstNodeService, private val plotReader: PlotReader) {
 
@@ -21,7 +20,7 @@ class BurstMiner(private val config: Config, private val burstNodeService: Burst
 
     private fun onNewRound(generationSignature: ByteArray, baseTarget: Long, height: Long) {
         synchronized(currentRoundSearchLock) {
-            println("NEW ROUND, generationSignature: ${Hex.toHexString(generationSignature)}, baseTarget: $baseTarget, height: $height)})")
+            println("NEW ROUND, generationSignature: ${BurstCrypto.getInstance().toHexString(generationSignature)}, baseTarget: $baseTarget, height: $height)})")
             println("Start time: ${System.currentTimeMillis()}ms")
             currentRoundSearch?.dispose()
             val scoop = burstCrypto.calculateScoop(generationSignature, height)
