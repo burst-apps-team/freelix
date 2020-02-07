@@ -1,6 +1,7 @@
 package burst.plotter.pocxor
 
 import burst.common.Util
+import burst.common.toPairList
 import burst.kit.crypto.BurstCrypto
 import burst.miner.pocxor.MiningPlot
 import burst.plotter.PlotWriter
@@ -53,9 +54,9 @@ class UnoptimizedXorPlotWriter(private val id: Long) : PlotWriter {
                     break
                 }
             }
-            println("Allocated ${buffers.size} buffers. Let's go!")
+            println("Allocated ${buffers.size} buffers, which means ${buffers.size / 2} threads can run. Let's go!")
 
-            return@fromCallable buffers
+            return@fromCallable buffers.toPairList()
         }
                 .subscribeOn(Schedulers.io())
                 .flattenAsObservable { it }
@@ -73,13 +74,13 @@ class UnoptimizedXorPlotWriter(private val id: Long) : PlotWriter {
                             }
                             println("Calculating data for start nonce $startNonce")
                             // Calculate the plot data
-                            calculatePlotData(buffer, startNonce)
+                            calculatePlotData(buffer.first, buffer.second, startNonce)
                             println("Start nonce $startNonce calculation finished!")
                             // Write it to disk
                             synchronized(writeDiskLock) {
                                 println("Writing start nonce $startNonce to disk...")
-                                output.seek(MiningPlot.SCOOPS_PER_PLOT * MiningPlot.PLOT_SIZE * startNonce)
-                                output.write(buffer)
+                                output.seek(MiningPlot.PLOT_SIZE * startNonce / 2)
+                                output.write(buffer.first)
                                 println("Finished writing start nonce $startNonce to disk...")
                             }
                         }
@@ -88,7 +89,7 @@ class UnoptimizedXorPlotWriter(private val id: Long) : PlotWriter {
                 }
     }
 
-    private fun calculatePlotData(buffer: ByteArray, startNonce: Long) {
+    private fun calculatePlotData(buffer: ByteArray, secondBuffer: ByteArray, startNonce: Long) {
         fun printProgress(currentNonce: Int) {
             // Update every 1%
             if (currentNonce % (MiningPlot.SCOOPS_PER_PLOT / 50 /* scoopsPerPlot*2/100 */) == 0) {
@@ -96,22 +97,20 @@ class UnoptimizedXorPlotWriter(private val id: Long) : PlotWriter {
             }
         }
 
-        // This prevents reallocating 256k of memory for each nonce - slight performance improvement
-        val plotBuffer = ByteArray(MiningPlot.PLOT_TOTAL_SIZE)
-
         burstCrypto.plotNonces(id, startNonce, MiningPlot.SCOOPS_PER_PLOT.toLong(), 2.toByte(), buffer, 0)
         printProgress(MiningPlot.SCOOPS_PER_PLOT)
 
         println("starting 2nd")
 
-        // TODO this can be accelerated using SIMD burstcrypto functions
+        burstCrypto.plotNonces(id, MiningPlot.SCOOPS_PER_PLOT + startNonce, MiningPlot.SCOOPS_PER_PLOT.toLong(), 2.toByte(), secondBuffer, 0)
         for (nonce in 0 until MiningPlot.SCOOPS_PER_PLOT) { // second set is nonce + SCOOPS_PER_PLOT and is xored
-            burstCrypto.plotNonce(id, nonce + MiningPlot.SCOOPS_PER_PLOT + startNonce, 2.toByte(), plotBuffer, 0)
             for (scoop in 0 until MiningPlot.SCOOPS_PER_PLOT) {
-                Util.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), plotBuffer, scoop * MiningPlot.SCOOP_SIZE, MiningPlot.SCOOP_SIZE)
+                Util.xorArray(buffer, (nonce * MiningPlot.SCOOP_SIZE + scoop * MiningPlot.PLOT_SIZE), secondBuffer, nonce * MiningPlot.PLOT_SIZE + scoop * MiningPlot.SCOOP_SIZE, MiningPlot.SCOOP_SIZE)
             }
             printProgress(nonce + MiningPlot.SCOOPS_PER_PLOT)
         }
+
+        printProgress(2 * MiningPlot.SCOOPS_PER_PLOT)
 
         println("Done!!!")
     }

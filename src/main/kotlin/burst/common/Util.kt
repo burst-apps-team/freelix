@@ -9,3 +9,13 @@ object Util {
         }
     }
 }
+
+fun <T> Iterable<T>.toPairList(): List<Pair<T, T>> {
+    val result = mutableListOf<Pair<T, T>>()
+    val iterator = iterator()
+    while (iterator.hasNext()) {
+        val first = iterator.next()
+        if (iterator.hasNext()) result.add(Pair(first, iterator.next()))
+    }
+    return result
+}
