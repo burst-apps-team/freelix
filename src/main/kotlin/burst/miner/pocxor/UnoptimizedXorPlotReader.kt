@@ -2,12 +2,12 @@ package burst.miner.pocxor
 
 import burst.common.Quad
 import burst.kit.crypto.BurstCrypto
+import burst.kit.entity.BurstAddress
 import burst.miner.Deadline
 import burst.miner.PlotReader
 import io.reactivex.Maybe
 import io.reactivex.Observable
 import io.reactivex.schedulers.Schedulers
-import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -59,18 +59,13 @@ class UnoptimizedXorPlotReader(private val plotFiles: Array<String>, private val
                 .map { Deadline(it.second, it.first) }
     }
 
-    // TODO fix burstkit4j and use that instead
+    // TODO fix burstkit4j
     private fun calculateDeadline(generationSignature: ByteArray, baseTarget: Long, scoopData: ByteArray): Long? {
         return try {
-            val shabal256 = BurstCrypto.getInstance().shabal256
-            shabal256.update(generationSignature)
-            shabal256.update(scoopData)
-            val hash = shabal256.digest()
-            (BigInteger(1, byteArrayOf(hash[7], hash[6], hash[5], hash[4], hash[3], hash[2], hash[1], hash[0])) / BigInteger.valueOf(baseTarget))
-                    .longValueExact()
+            BurstCrypto.getInstance().calculateHit(BurstAddress.fromId(0), 0, generationSignature, scoopData) / baseTarget.toBigInteger()
         } catch (e: ArithmeticException) {
             null
-        }
+        }?.longValueExact()
     }
 
     /**

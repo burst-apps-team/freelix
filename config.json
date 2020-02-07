@@ -1,9 +1,9 @@
 {
   "nodeAddresses": [
-    "https://wallet.burst-alliance.org:8125"
+    "http://burst.voiplanparty.com:8124"
   ],
   "plotFiles": [
-    "./7009665667967103287_0_1"
+    "./7009665667967103287_0_16"
   ],
   "pocVersion": 2
 }
